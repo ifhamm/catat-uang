@@ -1,0 +1,10 @@
+# Keep secrets and local installs out of the build context.
+**/node_modules
+**/dist
+**/.env
+.env
+.git
+.github
+.playwright-mcp
+frontend
+*.log
