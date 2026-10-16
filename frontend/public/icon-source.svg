@@ -1,0 +1,25 @@
+<svg width="512" height="512" viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#6f8f67" />
+      <stop offset="1" stop-color="#4a6245" />
+    </linearGradient>
+  </defs>
+
+  <!-- Full-bleed rounded square background -->
+  <rect width="512" height="512" rx="116" fill="url(#bg)" />
+
+  <!-- Coin -->
+  <circle cx="256" cy="256" r="126" fill="#f5f1e9" />
+  <circle cx="256" cy="256" r="126" fill="none" stroke="#e6dfd1" stroke-width="6" />
+
+  <!-- Rising bars: daily tracking -->
+  <g fill="#5e7c58">
+    <rect x="185" y="284" width="36" height="54" rx="18" />
+    <rect x="238" y="248" width="36" height="90" rx="18" />
+    <rect x="291" y="204" width="36" height="134" rx="18" />
+  </g>
+
+  <!-- Accent dot -->
+  <circle cx="321" cy="188" r="17" fill="#b95a3c" />
+</svg>
