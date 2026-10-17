@@ -1,3 +1,4 @@
+import { dateOnlyDaysAgo, todayDateOnly } from '../../utils/date';
 import { EXPENSE_CATEGORIES, INCOME_CATEGORIES, TransactionType } from './types';
 
 export interface ParsedDraft {
@@ -73,20 +74,12 @@ export class TextParserService {
   }
 
   /**
-   * Determine date from text ("kemarin" -> yesterday, else today)
+   * Determine date from text ("kemarin" -> yesterday, else today), resolved in
+   * the app timezone so a UTC server does not shift the day.
    */
   static parseDate(text: string): string {
     const lower = text.toLowerCase();
-    const now = new Date();
-
-    if (lower.includes('kemarin')) {
-      now.setDate(now.getDate() - 1);
-    }
-
-    const year = now.getFullYear();
-    const month = String(now.getMonth() + 1).padStart(2, '0');
-    const day = String(now.getDate()).padStart(2, '0');
-    return `${year}-${month}-${day}`;
+    return lower.includes('kemarin') ? dateOnlyDaysAgo(1) : todayDateOnly();
   }
 
   /**

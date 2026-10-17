@@ -1,4 +1,5 @@
 import { pool } from '../../db';
+import { currentMonth, toDateOnly, todayDateOnly } from '../../utils/date';
 import { Transaction, MonthSummary } from './types';
 
 export class TransactionService {
@@ -66,7 +67,7 @@ export class TransactionService {
 
       await client.query('BEGIN');
 
-      const occurredOn = data.occurred_on || new Date().toISOString().slice(0, 10);
+      const occurredOn = data.occurred_on || todayDateOnly();
       const source = data.source || 'manual';
 
       const insertTxRes = await client.query(
@@ -158,7 +159,7 @@ export class TransactionService {
    * Monthly Summary: PRD Bagian 6 & 10
    */
   static async getSummary(userId: string, monthStr?: string): Promise<MonthSummary> {
-    const targetMonth = monthStr || new Date().toISOString().slice(0, 7); // YYYY-MM
+    const targetMonth = monthStr || currentMonth(); // YYYY-MM
     const startDate = `${targetMonth}-01`;
 
     const summaryQuery = `
@@ -350,9 +351,7 @@ export class TransactionService {
       type: row.type,
       amount_idr: Number(row.amount_idr),
       currency: row.currency,
-      occurred_on: typeof row.occurred_on === 'object' && row.occurred_on.toISOString
-        ? row.occurred_on.toISOString().slice(0, 10)
-        : String(row.occurred_on).slice(0, 10),
+      occurred_on: toDateOnly(row.occurred_on),
       category: row.category,
       description: row.description,
       source: row.source,
