@@ -44,3 +44,9 @@ coverage/
 .temp/
 .cache/
 .playwright-mcp/
+
+# wrangler files
+.wrangler
+.dev.vars*
+!.dev.vars.example
+!.env.example
