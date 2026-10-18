@@ -109,7 +109,7 @@ export const api = {
     category: string;
     occurred_on?: string;
     description?: string | null;
-    source?: 'voice' | 'text' | 'manual';
+    source?: 'voice' | 'text' | 'manual' | 'image';
     confirm_duplicate?: boolean;
   }): Promise<{ transaction: Transaction; isIdempotentReplay: boolean }> {
     const res = await request('/api/transactions', {
@@ -184,5 +184,24 @@ export const api = {
 
     const res = await request('/api/voice/parse', { method: 'POST', body: formData });
     return readJson(res, 'Gagal memproses suara');
+  },
+
+  // Screenshot parse: m-banking / e-wallet statement images (mirrors voice)
+  async parseImage(imageFile: Blob): Promise<DraftTransaction> {
+    const formData = new FormData();
+    const fileName = imageFile instanceof File && imageFile.name ? imageFile.name : 'screenshot.png';
+    formData.append('image', imageFile, fileName);
+
+    const res = await request('/api/image/parse', { method: 'POST', body: formData });
+    const data = await readJson<any>(res, 'Gagal memproses tangkapan layar');
+    return {
+      type: data.type,
+      amount_idr: data.amount_idr ?? null,
+      category: data.category,
+      occurred_on: data.occurred_on,
+      description: data.description,
+      source: 'image',
+      notes: data.notes,
+    };
   },
 };

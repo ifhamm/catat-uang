@@ -23,7 +23,7 @@ export const ALL_CATEGORIES = [
 ] as const;
 
 export type TransactionType = 'INCOME' | 'EXPENSE';
-export type TransactionSource = 'voice' | 'text' | 'manual';
+export type TransactionSource = 'voice' | 'text' | 'manual' | 'image';
 
 export interface Transaction {
   id: string;
@@ -63,7 +63,7 @@ export const createTransactionSchema = z.object({
     .regex(/^\d{4}-\d{2}-\d{2}$/, { message: 'Format tanggal harus YYYY-MM-DD' })
     .optional(),
   description: z.string().max(500).optional().nullable(),
-  source: z.enum(['voice', 'text', 'manual']).default('manual'),
+  source: z.enum(['voice', 'text', 'manual', 'image']).default('manual'),
   confirm_duplicate: z.boolean().optional().default(false)
 });
 

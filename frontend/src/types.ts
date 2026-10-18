@@ -1,5 +1,5 @@
 export type TransactionType = 'INCOME' | 'EXPENSE';
-export type TransactionSource = 'voice' | 'text' | 'manual';
+export type TransactionSource = 'voice' | 'text' | 'manual' | 'image';
 
 export interface Transaction {
   id: string;

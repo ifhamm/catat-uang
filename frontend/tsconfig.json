@@ -20,5 +20,7 @@
     "noUnusedParameters": false,
     "noFallthroughCasesInSwitch": true
   },
-  "include": ["src"]
+  "include": ["src"],
+  /* sw.ts is a service worker: it needs the WebWorker lib, not DOM. */
+  "exclude": ["src/sw.ts"]
 }

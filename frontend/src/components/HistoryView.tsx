@@ -74,7 +74,8 @@ export const HistoryView: React.FC<HistoryViewProps> = ({
   const sourceLabel: Record<string, string> = {
     voice: 'Suara',
     text: 'Tulisan',
-    manual: 'Manual'
+    manual: 'Manual',
+    image: 'Tangkapan layar'
   };
 
   const handleDelete = async () => {

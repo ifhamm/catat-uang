@@ -6,12 +6,14 @@ import multer from 'multer';
 import rateLimit from 'express-rate-limit';
 import { GeminiTranscriptionService } from './services/transcription/GeminiTranscriptionService';
 import { MockTranscriptionService } from './services/transcription/MockTranscriptionService';
+import { GeminiImageParsingService } from './services/imageParsing/GeminiImageParsingService';
+import { MockImageParsingService } from './services/imageParsing/MockImageParsingService';
 import { TransactionService } from './services/transaction/TransactionService';
 import { TextParserService } from './services/transaction/TextParserService';
 import { createTransactionSchema, updateTransactionSchema, parseTextSchema } from './services/transaction/types';
 import { runMigrations } from './db/migrate';
 import { initAuth, requireAuth, userIdOf } from './middleware/auth';
-import { CORS_ORIGINS, MAX_AUDIO_BYTES } from './config';
+import { CORS_ORIGINS, MAX_AUDIO_BYTES, MAX_IMAGE_BYTES, ALLOWED_IMAGE_TYPES } from './config';
 import { pool } from './db';
 
 const app = express();
@@ -27,6 +29,22 @@ app.use(express.json({ limit: '1mb' }));
 const upload = multer({
   storage: multer.memoryStorage(),
   limits: { fileSize: MAX_AUDIO_BYTES, files: 1 },
+});
+
+// Screenshot uploads: same in-memory approach, smaller cap and a MIME allowlist.
+const uploadImage = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: MAX_IMAGE_BYTES, files: 1 },
+  fileFilter: (_req, file, cb) => {
+    if (ALLOWED_IMAGE_TYPES.includes(file.mimetype.toLowerCase())) {
+      return cb(null, true);
+    }
+    const err: any = new Error(
+      'Format gambar tidak didukung. Gunakan PNG, JPEG, atau WebP.'
+    );
+    err.statusCode = 415;
+    cb(err);
+  },
 });
 
 // Voice parsing is comparatively expensive; keep a firm per-client ceiling.
@@ -46,6 +64,16 @@ try {
 } catch (e: any) {
   console.warn('Falling back to Mock API:', e.message);
   transcriptionService = new MockTranscriptionService();
+}
+
+// Screenshot Parsing Service (m-banking / e-wallet statements)
+let imageParsingService: any;
+try {
+  imageParsingService = new GeminiImageParsingService();
+  console.log('Using Gemini API for screenshot parsing');
+} catch (e: any) {
+  console.warn('Falling back to Mock image parsing:', e.message);
+  imageParsingService = new MockImageParsingService();
 }
 
 // Health check (public) — used by Render and uptime monitors.
@@ -94,6 +122,23 @@ app.post('/api/text/parse', parseLimiter, async (req, res) => {
   } catch (error: any) {
     console.error('Text parsing error:', error);
     res.status(500).json({ error: 'Text parsing failed' });
+  }
+});
+
+// Screenshot Parse: shared/uploaded m-banking or e-wallet screenshots.
+// Returns the same shape as a voice result so the client opens the same review modal.
+app.post('/api/image/parse', parseLimiter, uploadImage.single('image'), async (req, res) => {
+  try {
+    const imageFile = req.file;
+    if (!imageFile) {
+      return res.status(400).json({ error: 'No image file uploaded' });
+    }
+
+    const result = await imageParsingService.parseImage(imageFile.buffer, imageFile.mimetype);
+    res.json(result);
+  } catch (error: any) {
+    console.error('Screenshot parsing error:', error);
+    res.status(500).json({ error: 'Screenshot processing failed', message: error?.message });
   }
 });
 
@@ -240,7 +285,12 @@ app.post('/api/transactions/:id/restore', async (req, res) => {
 // Multer and generic error handler (runs after routes).
 app.use((err: any, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
   if (err?.code === 'LIMIT_FILE_SIZE') {
-    return res.status(413).json({ error: 'File audio terlalu besar (maksimal 10 MB).' });
+    return res
+      .status(413)
+      .json({ error: 'File terlalu besar. Maksimal 10 MB untuk audio dan 8 MB untuk gambar.' });
+  }
+  if (err?.statusCode === 415) {
+    return res.status(415).json({ error: err.message });
   }
   console.error('Unhandled error:', err);
   res.status(500).json({ error: 'Terjadi kesalahan pada server.' });

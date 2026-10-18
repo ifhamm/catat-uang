@@ -1,7 +1,8 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { LogOut, Loader2 } from 'lucide-react';
 import { useAudioRecorder } from './hooks/useAudioRecorder';
 import { useAuth } from './hooks/useAuth';
+import { useSharedImage } from './hooks/useSharedImage';
 import { api, setUnauthorizedHandler } from './services/api';
 import { isSupabaseConfigured } from './lib/supabase';
 import { Transaction, MonthSummary, DraftTransaction, TransactionType } from './types';
@@ -40,6 +41,11 @@ export function App() {
 
   // Voice recording hook (Tahap A)
   const { status, setStatus, errorMessage, startRecording, stopRecording } = useAudioRecorder();
+
+  // Screenshot capture state — same lifecycle as the voice recorder
+  const [isParsingImage, setIsParsingImage] = useState<boolean>(false);
+  const [imageError, setImageError] = useState<string | null>(null);
+  const imageInputRef = useRef<HTMLInputElement | null>(null);
 
   // Load Home Data (Summary & Recent)
   const loadHomeData = useCallback(async () => {
@@ -94,6 +100,7 @@ export function App() {
     setActiveDraft(null);
     setEditingTransaction(null);
     setUndoItem(null);
+    setImageError(null);
   }, [session]);
 
   // Voice Recording Toggle
@@ -125,6 +132,59 @@ export function App() {
     }
   };
 
+  // Screenshot → Draft (opens the same review modal as voice; never auto-saves)
+  const handleImageFile = useCallback(async (file: File) => {
+    try {
+      setIsParsingImage(true);
+      setImageError(null);
+      const draft = await api.parseImage(file);
+      setActiveDraft(draft);
+    } catch (err: any) {
+      console.error('Screenshot parsing error:', err);
+      setImageError(err?.message || 'Gagal membaca tangkapan layar. Coba lagi.');
+    } finally {
+      setIsParsingImage(false);
+    }
+  }, []);
+
+  const handlePickImage = () => {
+    if (isParsingImage) return;
+    setImageError(null);
+    imageInputRef.current?.click();
+  };
+
+  // Paste a screenshot (Ctrl/Cmd+V) anywhere outside an open draft modal.
+  useEffect(() => {
+    const handlePaste = (event: ClipboardEvent) => {
+      if (activeDraft) return;
+      const items = event.clipboardData?.items;
+      if (!items) return;
+
+      for (const item of Array.from(items)) {
+        if (!item.type.startsWith('image/')) continue;
+        const file = item.getAsFile();
+        if (file) {
+          event.preventDefault();
+          void handleImageFile(file);
+        }
+        break;
+      }
+    };
+
+    window.addEventListener('paste', handlePaste);
+    return () => window.removeEventListener('paste', handlePaste);
+  }, [handleImageFile, activeDraft]);
+
+  // Android Web Share Target: a screenshot shared from the gallery or an
+  // m-banking app lands in Cache Storage; this claims it and opens the
+  // review modal (same path as the in-app picker — never an auto-save).
+  useSharedImage({
+    enabled: !!session,
+    onDraft: setActiveDraft,
+    onBusy: setIsParsingImage,
+    onError: setImageError,
+  });
+
   // Save Transaction (from Draft Modal)
   const handleSaveDraft = async (data: {
     type: TransactionType;
@@ -132,7 +192,7 @@ export function App() {
     category: string;
     occurred_on: string;
     description: string;
-    source: 'voice' | 'text' | 'manual';
+    source: 'voice' | 'text' | 'manual' | 'image';
     confirm_duplicate?: boolean;
   }) => {
     const opId = crypto.randomUUID();
@@ -254,6 +314,20 @@ export function App() {
   return (
     <div className="min-h-screen bg-paper text-ink font-sans antialiased selection:bg-sage-soft selection:text-sage-deep">
       <OfflineBanner />
+
+      {/* Hidden picker for screenshot capture (tangkapan layar) */}
+      <input
+        ref={imageInputRef}
+        type="file"
+        accept="image/png,image/jpeg,image/webp"
+        className="hidden"
+        onChange={(e) => {
+          const file = e.target.files?.[0];
+          e.target.value = '';
+          if (file) void handleImageFile(file);
+        }}
+      />
+
       <div className="max-w-md mx-auto min-h-screen flex flex-col px-4 pt-6">
         {/* App Bar Header */}
         <header className="flex items-center gap-2.5 mb-6">
@@ -288,6 +362,9 @@ export function App() {
               recorderError={errorMessage}
               onMicClick={handleRecordToggle}
               onQuickTextClick={() => setIsQuickTextOpen(true)}
+              onImageClick={handlePickImage}
+              isParsingImage={isParsingImage}
+              imageError={imageError}
               onQuickIncome={handleQuickIncome}
               onQuickExpense={handleQuickExpense}
               onSelectTransaction={handleStartEdit}

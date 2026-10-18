@@ -1,6 +1,6 @@
 import React from 'react';
 import { MonthSummary, Transaction } from '../types';
-import { Mic, Square, Loader2, ChevronLeft, ChevronRight, TrendingDown, TrendingUp, Keyboard, Calendar } from 'lucide-react';
+import { Mic, Square, Loader2, ChevronLeft, ChevronRight, TrendingDown, TrendingUp, Keyboard, Image, Calendar } from 'lucide-react';
 import { formatDayMonth, formatRupiah } from '../utils/format';
 
 interface HomeViewProps {
@@ -12,6 +12,9 @@ interface HomeViewProps {
   recorderError?: string;
   onMicClick: () => void;
   onQuickTextClick: () => void;
+  onImageClick: () => void;
+  isParsingImage?: boolean;
+  imageError?: string | null;
   onQuickIncome: () => void;
   onQuickExpense: () => void;
   onSelectTransaction?: (tx: Transaction) => void;
@@ -26,6 +29,9 @@ export const HomeView: React.FC<HomeViewProps> = ({
   recorderError,
   onMicClick,
   onQuickTextClick,
+  onImageClick,
+  isParsingImage,
+  imageError,
   onQuickIncome,
   onQuickExpense,
   onSelectTransaction
@@ -218,15 +224,39 @@ export const HomeView: React.FC<HomeViewProps> = ({
           </div>
         )}
 
-        {/* Quick Text */}
+        {/* Quick Text & Screenshot */}
         <div className="mt-6 pt-4 border-t border-line w-full relative z-10">
-          <button
-            onClick={onQuickTextClick}
-            className="w-full inline-flex items-center justify-center gap-2 py-2.5 rounded-xl text-[13px] font-semibold text-ink-soft bg-paper hover:bg-paper-2 border border-line active:scale-95 transition-all"
-          >
-            <Keyboard className="w-4 h-4 text-muted" />
-            <span>Atau ketik saja</span>
-          </button>
+          <div className="grid grid-cols-2 gap-2">
+            <button
+              onClick={onQuickTextClick}
+              className="inline-flex items-center justify-center gap-2 py-2.5 rounded-xl text-[13px] font-semibold text-ink-soft bg-paper hover:bg-paper-2 border border-line active:scale-95 transition-all"
+            >
+              <Keyboard className="w-4 h-4 text-muted" />
+              <span>Ketik saja</span>
+            </button>
+            <button
+              onClick={onImageClick}
+              disabled={isParsingImage}
+              className="inline-flex items-center justify-center gap-2 py-2.5 rounded-xl text-[13px] font-semibold text-ink-soft bg-paper hover:bg-paper-2 border border-line active:scale-95 transition-all disabled:opacity-60"
+            >
+              {isParsingImage ? (
+                <Loader2 className="w-4 h-4 text-muted animate-spin" />
+              ) : (
+                <Image className="w-4 h-4 text-muted" />
+              )}
+              <span>{isParsingImage ? 'Membaca…' : 'Tangkapan layar'}</span>
+            </button>
+          </div>
+
+          {(isParsingImage || imageError) && (
+            <p
+              className={`mt-2.5 text-center text-xs font-semibold ${
+                imageError ? 'text-clay-deep' : 'text-muted'
+              }`}
+            >
+              {imageError ?? 'Membaca tangkapan layar…'}
+            </p>
+          )}
         </div>
       </div>
 

@@ -35,3 +35,8 @@ export const CORS_ORIGINS = (
 export const IS_PROD = process.env.NODE_ENV === 'production';
 
 export const MAX_AUDIO_BYTES = 10 * 1024 * 1024;
+
+/** Screenshots are smaller than audio recordings; keep a firm ceiling either way. */
+export const MAX_IMAGE_BYTES = 8 * 1024 * 1024;
+
+export const ALLOWED_IMAGE_TYPES = ['image/png', 'image/jpeg', 'image/webp'];

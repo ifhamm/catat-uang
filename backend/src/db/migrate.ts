@@ -60,6 +60,26 @@ export async function runMigrations() {
       CREATE INDEX IF NOT EXISTS idx_operations_lookup ON operations (user_id, operation_id);
     `);
 
+    // 4. Widen transactions.source so screenshot captures can be stored.
+    //    The table predates the image flow, so the inline CHECK constraint has
+    //    to be rebuilt — idempotently, and only when 'image' is still missing.
+    const constraints = await client.query(`
+      SELECT conname, pg_get_constraintdef(oid) AS def
+      FROM pg_constraint
+      WHERE conrelid = 'transactions'::regclass AND contype = 'c'
+    `);
+    const sourceCheck = constraints.rows.find(
+      (row: { conname: string; def: string }) => /source/i.test(row.def) && /voice/i.test(row.def)
+    );
+    if (sourceCheck && !sourceCheck.def.includes('image')) {
+      await client.query(`ALTER TABLE transactions DROP CONSTRAINT "${sourceCheck.conname}"`);
+      await client.query(`
+        ALTER TABLE transactions ADD CONSTRAINT "${sourceCheck.conname}"
+        CHECK (source IN ('voice', 'text', 'manual', 'image'))
+      `);
+      console.log('   ↳ transactions.source constraint widened to include "image"');
+    }
+
     await client.query('COMMIT');
     console.log('✅ Supabase database migrations completed successfully!');
   } catch (error) {

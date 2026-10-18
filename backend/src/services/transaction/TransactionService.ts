@@ -15,7 +15,7 @@ export class TransactionService {
       category: string;
       occurred_on?: string | undefined;
       description?: string | null | undefined;
-      source?: 'voice' | 'text' | 'manual' | undefined;
+      source?: 'voice' | 'text' | 'manual' | 'image' | undefined;
       confirm_duplicate?: boolean | undefined;
     }
   ): Promise<{ transaction: Transaction; isIdempotentReplay: boolean }> {

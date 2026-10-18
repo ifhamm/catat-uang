@@ -12,7 +12,7 @@ interface TransactionDraftModalProps {
     category: string;
     occurred_on: string;
     description: string;
-    source: 'voice' | 'text' | 'manual';
+    source: 'voice' | 'text' | 'manual' | 'image';
     confirm_duplicate?: boolean;
   }) => Promise<void>;
 }
@@ -40,6 +40,7 @@ export const TransactionDraftModal: React.FC<TransactionDraftModalProps> = ({
   const titleBySource: Record<string, string> = {
     voice: 'Draf dari suara',
     text: 'Draf dari tulisan',
+    image: 'Draf dari tangkapan layar',
     manual: 'Catatan baru'
   };
 
